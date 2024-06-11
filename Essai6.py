@@ -10,13 +10,13 @@ st.set_page_config(layout="wide")
 
 # Function to simulate real-time data
 def generate_real_time_data():
-    mttr_hours = np.random.randint(3, 8)
-    mttr_percentage_change = np.random.uniform(-10, 10)
-    mtbf_hours = np.random.randint(8, 15)
-    mtbf_percentage_change = np.random.uniform(-10, 10)
-    quality = np.random.uniform(85, 95)
-    performance = np.random.uniform(85, 95)
-    availability = np.random.uniform(75, 85)
+    mttr_hours = np.random.randint(2, 6)
+    mttr_percentage_change = np.random.uniform(-5, 5)
+    mtbf_hours = np.random.randint(24, 150)
+    mtbf_percentage_change = np.random.uniform(-5, 5)
+    quality = np.random.uniform(80, 95)
+    performance = np.random.uniform(80, 95)
+    availability = mtbf_hours / (mtbf_hours + mttr_hours)*100
     oee = (quality * performance * availability) / 10000
 
     return {
@@ -29,7 +29,8 @@ if 'kpi_data' not in st.session_state:
     st.session_state.kpi_data = {
         'mttr': [],
         'mtbf': [],
-        'time': []
+        'oee': [],
+        'month': []
     }
 
 if 'maintenance_data' not in st.session_state:
@@ -89,49 +90,55 @@ def page_2():
     # Header
     st.title("Preventive Maintenance Plan Dashboard")
 
-    # Simulate data for 12 months in 5 seconds
-    if 'simulated' not in st.session_state:
-        for _ in range(12):
-            data = generate_real_time_data()
-            current_time = time.strftime("%H:%M:%S")
-            st.session_state.kpi_data['mttr'].append(data["mttr"]["Hours"])
-            st.session_state.kpi_data['mtbf'].append(data["mtbf"]["Hours"])
-            st.session_state.kpi_data['time'].append(current_time)
-            time.sleep(5 / 12)  # Wait for 5/12 seconds to simulate real-time data generation
-        st.session_state.simulated = True
+    # Update real-time data
+    data = generate_real_time_data()
+    if 'month_counter' not in st.session_state:
+        st.session_state.month_counter = 1
 
-  
+    st.session_state.kpi_data['mttr'].append(data["mttr"]["Hours"])
+    st.session_state.kpi_data['mtbf'].append(data["mtbf"]["Hours"])
+    st.session_state.kpi_data['oee'].append(data["oee"]["OEE"])
+    st.session_state.kpi_data['month'].append(st.session_state.month_counter)
+
+    # Increment month counter and reset to 1 if it exceeds 12
+    st.session_state.month_counter += 1
+    if st.session_state.month_counter > 12:
+        st.session_state.month_counter = 1
+
+    # Ensure that only the latest 12 data points are kept
+    if len(st.session_state.kpi_data['mttr']) > 12:
+        st.session_state.kpi_data['mttr'] = st.session_state.kpi_data['mttr'][-12:]
+        st.session_state.kpi_data['mtbf'] = st.session_state.kpi_data['mtbf'][-12:]
+        st.session_state.kpi_data['oee'] = st.session_state.kpi_data['oee'][-12:]
+        st.session_state.kpi_data['month'] = st.session_state.kpi_data['month'][-12:]
+
+    # MTTR and MTBF Visualization
+    st.header("Maintenance KPIs")
 
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Mean Time Between Failures (MTBF)")
-        delta_color = "inverse" if st.session_state.kpi_data['mtbf'][-1] < st.session_state.kpi_data['mtbf'][-2] else "normal"
-        st.metric("MTBF Hours", st.session_state.kpi_data['mtbf'][-1], f"{((st.session_state.kpi_data['mtbf'][-1] - st.session_state.kpi_data['mtbf'][-2]) / st.session_state.kpi_data['mtbf'][-2]) * 100:.2f}%", delta_color=delta_color)
-        st.line_chart(pd.DataFrame({'Month': range(1, 13), 'MTBF': st.session_state.kpi_data['mtbf']}).set_index('Month'))
+        delta_color = "inverse" if len(st.session_state.kpi_data['mtbf']) > 1 and st.session_state.kpi_data['mtbf'][-1] < st.session_state.kpi_data['mtbf'][-2] else "normal"
+        st.metric("MTBF Hours", st.session_state.kpi_data['mtbf'][-1], f"{((st.session_state.kpi_data['mtbf'][-1] - st.session_state.kpi_data['mtbf'][-2]) / st.session_state.kpi_data['mtbf'][-2]) * 100:.2f}%" if len(st.session_state.kpi_data['mtbf']) > 1 else "", delta_color=delta_color)
+        st.line_chart(pd.DataFrame({'Month': st.session_state.kpi_data['month'], 'MTBF': st.session_state.kpi_data['mtbf']}).set_index('Month'))
     with col2:
         st.subheader("Mean Time to Repair (MTTR)")
-        delta_color = "inverse" if st.session_state.kpi_data['mttr'][-1] < st.session_state.kpi_data['mttr'][-2] else "normal"
-        st.metric("MTTR Hours", st.session_state.kpi_data['mttr'][-1], f"{((st.session_state.kpi_data['mttr'][-1] - st.session_state.kpi_data['mttr'][-2]) / st.session_state.kpi_data['mttr'][-2]) * 100:.2f}%", delta_color='inverse')
-        st.line_chart(pd.DataFrame({'Month': range(1, 13), 'MTTR': st.session_state.kpi_data['mttr']}).set_index('Month'))
+        delta_color = "inverse" if len(st.session_state.kpi_data['mttr']) > 1 and st.session_state.kpi_data['mttr'][-1] < st.session_state.kpi_data['mttr'][-2] else "normal"
+        st.metric("MTTR Hours", st.session_state.kpi_data['mttr'][-1], f"{((st.session_state.kpi_data['mttr'][-1] - st.session_state.kpi_data['mttr'][-2]) / st.session_state.kpi_data['mttr'][-2]) * 100:.2f}%" if len(st.session_state.kpi_data['mttr']) > 1 else "", delta_color='inverse')
+        st.line_chart(pd.DataFrame({'Month': st.session_state.kpi_data['month'], 'MTTR': st.session_state.kpi_data['mttr']}).set_index('Month'))
 
-    # Generate new data for OEE
-    data = generate_real_time_data()
     col1, col2 = st.columns(2)
     with col1:
         # OEE Visualization
         st.header("Overall Equipment Effectiveness (OEE)")
 
-        oee_value = data["oee"]["OEE"]
-        quality_value = data["oee"]["Quality"]
-        performance_value = data["oee"]["Performance"]
-        availability_value = data["oee"]["Availability"]
-
+        oee_value = st.session_state.kpi_data['oee'][-1]
         st.metric("OEE", f"{oee_value:.2f}%")
 
         # Horizontal bar chart for OEE components using Altair
         oee_components = pd.DataFrame({
             'Component': ['Quality', 'Performance', 'Availability'],
-            'Value': [quality_value, performance_value, availability_value]
+            'Value': [data["oee"]["Quality"], data["oee"]["Performance"], data["oee"]["Availability"]]
         })
 
         chart = alt.Chart(oee_components).mark_bar().encode(
@@ -183,3 +190,7 @@ if page == "Maintenance Tasks":
     page_1()
 else:
     page_2()
+
+    # Simulate real-time data update
+    time.sleep(3)
+    st.experimental_rerun()
