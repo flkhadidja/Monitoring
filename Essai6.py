@@ -8,7 +8,6 @@ import time
 # Set page configuration to wide mode
 st.set_page_config(layout="wide")
 
-
 # Function to simulate real-time data
 def generate_real_time_data():
     mttr_hours = np.random.randint(3, 8)
@@ -51,29 +50,29 @@ def update_task(index, status, scheduled_date, completion_date):
 def page_1():
     data = st.session_state.maintenance_data
 
-    # Section pour ajouter une nouvelle tâche
-    st.header("Ajouter une Nouvelle Tâche")
+    # Section to add a new task
+    st.header("Add a New Task")
     with st.form("add_task"):
-        new_task = st.text_input("Nom de la Tâche")
-        new_scheduled_date = st.date_input("Date Planifiée")
-        new_completion_date = st.date_input("Date de Réalisation", key='new_completion_date', value=None)
-        new_status = st.selectbox("Statut", ['Pending', 'Completed', 'Planned'], key='new_status')
-        submit_button = st.form_submit_button("Ajouter la Tâche")
+        new_task = st.text_input("Task Name")
+        new_scheduled_date = st.date_input("Scheduled Date")
+        new_completion_date = st.date_input("Completion Date", key='new_completion_date', value=None)
+        new_status = st.selectbox("Status", ['Pending', 'Completed', 'Planned'], key='new_status')
+        submit_button = st.form_submit_button("Add Task")
         
         if submit_button:
             new_data = pd.DataFrame({
                 'Task': [new_task],
                 'ScheduledDate': [new_scheduled_date],
-                'CompletionDate': [new_completion_date if new_completion_date else ''],
+                'CompletionDate': [new_completion_date if new_completion_date else None],
                 'Status': [new_status]
             })
             st.session_state.maintenance_data = pd.concat([data, new_data], ignore_index=True)
             st.session_state.maintenance_data['ScheduledDate'] = pd.to_datetime(st.session_state.maintenance_data['ScheduledDate'])
             st.session_state.maintenance_data['CompletionDate'] = pd.to_datetime(st.session_state.maintenance_data['CompletionDate'], errors='coerce')
-            st.success("Tâche ajoutée avec succès!")
+            st.success("Task added successfully!")
 
-    # Section pour afficher et mettre à jour les tâches existantes
-    st.header("Tâches de Maintenance")
+    # Section to display and update existing tasks
+    st.header("Maintenance Tasks")
     for i in range(len(data)):
         col1, col2, col3, col4, col5, col6 = st.columns(6)
         col1.write(data['Task'][i])
@@ -81,8 +80,9 @@ def page_1():
         new_completion_date = col3.date_input(f'Completion Date for {data["Task"][i]}', value=data['CompletionDate'][i] if pd.notnull(data['CompletionDate'][i]) else None, key=f'completion_date_{i}')
         new_status = col4.selectbox(f'Status for {data["Task"][i]}', ['Pending', 'Completed', 'Planned'], index=['Pending', 'Completed', 'Planned'].index(data['Status'][i]), key=f'status_{i}')
         col5.write(data['Status'][i])
-        if col6.button('Supprimer', key=f'delete_{i}'):
+        if col6.button('Delete', key=f'delete_{i}'):
             st.session_state.maintenance_data = data.drop(i).reset_index(drop=True)
+            break
         update_task(i, new_status, new_scheduled_date, new_completion_date)
 
 def page_2():
@@ -100,8 +100,7 @@ def page_2():
             time.sleep(5 / 12)  # Wait for 5/12 seconds to simulate real-time data generation
         st.session_state.simulated = True
 
-    # MTTR and MTBF Visualization
-    st.header("Maintenance KPIs")
+  
 
     col1, col2 = st.columns(2)
     with col1:
@@ -115,6 +114,8 @@ def page_2():
         st.metric("MTTR Hours", st.session_state.kpi_data['mttr'][-1], f"{((st.session_state.kpi_data['mttr'][-1] - st.session_state.kpi_data['mttr'][-2]) / st.session_state.kpi_data['mttr'][-2]) * 100:.2f}%", delta_color='inverse')
         st.line_chart(pd.DataFrame({'Month': range(1, 13), 'MTTR': st.session_state.kpi_data['mttr']}).set_index('Month'))
 
+    # Generate new data for OEE
+    data = generate_real_time_data()
     col1, col2 = st.columns(2)
     with col1:
         # OEE Visualization
@@ -157,15 +158,15 @@ def page_2():
 
         st.altair_chart(chart, use_container_width=True)
     with col2:
-        # Calcul du taux de réalisation
+        # Calculate completion rate
         filtered_data = st.session_state.maintenance_data[st.session_state.maintenance_data['Status'] != 'Planned']
         filtered_data['StatusValue'] = filtered_data['Status'].apply(lambda x: 1 if x == 'Completed' else 0)
         completion_rate = filtered_data['StatusValue'].mean() * 100 if len(filtered_data) > 0 else 0
 
-        st.subheader("Taux de Réalisation")
+        st.subheader("Completion Rate")
         st.metric("Completion Rate", f"{completion_rate:.2f}%")
 
-        # Diagramme circulaire (Donut Chart) du taux de réalisation avec couleurs spécifiées
+        # Donut chart for completion rate with specified colors
         completion_status_counts = filtered_data['Status'].value_counts()
         fig_pie = px.pie(
             values=completion_status_counts.values, 
