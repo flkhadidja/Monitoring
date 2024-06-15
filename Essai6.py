@@ -118,7 +118,7 @@ def page_2():
     with col1:
         st.subheader("Mean Time Between Failures (MTBF)")
         delta_color = "inverse" if len(st.session_state.kpi_data['mtbf']) > 1 and st.session_state.kpi_data['mtbf'][-1] < st.session_state.kpi_data['mtbf'][-2] else "normal"
-        st.metric("MTBF Hours", st.session_state.kpi_data['mtbf'][-1], f"{((st.session_state.kpi_data['mtbf'][-1] - st.session_state.kpi_data['mtbf'][-2]) / st.session_state.kpi_data['mtbf'][-2]) * 100:.2f}%" if len(st.session_state.kpi_data['mtbf']) > 1 else "", delta_color=delta_color)
+        st.metric("MTBF Hours", st.session_state.kpi_data['mtbf'][-1], f"{((st.session_state.kpi_data['mtbf'][-1] - st.session_state.kpi_data['mtbf'][-2]) / st.session_state.kpi_data['mtbf'][-2]) * 100:.2f}%" if len(st.session_state.kpi_data['mtbf']) > 1 else "", delta_color='delta_color')
         st.line_chart(pd.DataFrame({'Month': st.session_state.kpi_data['month'], 'MTBF': st.session_state.kpi_data['mtbf']}).set_index('Month'))
     with col2:
         st.subheader("Mean Time to Repair (MTTR)")
