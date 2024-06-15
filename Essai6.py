@@ -113,9 +113,8 @@ def page_2():
         st.session_state.kpi_data['month'] = st.session_state.kpi_data['month'][-12:]
 
     # MTTR and MTBF Visualization
-    st.header("Maintenance KPIs")
 
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([1,1])
     with col1:
         st.subheader("Mean Time Between Failures (MTBF)")
         delta_color = "inverse" if len(st.session_state.kpi_data['mtbf']) > 1 and st.session_state.kpi_data['mtbf'][-1] < st.session_state.kpi_data['mtbf'][-2] else "normal"
@@ -127,7 +126,7 @@ def page_2():
         st.metric("MTTR Hours", st.session_state.kpi_data['mttr'][-1], f"{((st.session_state.kpi_data['mttr'][-1] - st.session_state.kpi_data['mttr'][-2]) / st.session_state.kpi_data['mttr'][-2]) * 100:.2f}%" if len(st.session_state.kpi_data['mttr']) > 1 else "", delta_color='inverse')
         st.line_chart(pd.DataFrame({'Month': st.session_state.kpi_data['month'], 'MTTR': st.session_state.kpi_data['mttr']}).set_index('Month'))
 
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([1,1])
     with col1:
         # OEE Visualization
         st.header("Overall Equipment Effectiveness (OEE)")
